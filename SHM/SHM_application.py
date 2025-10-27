@@ -714,6 +714,42 @@ else:
 
 #attr_sensors = [25,9,29,27,11,24,21,13,17,23,12,19,14,16,7,22,15,26,3] # 19 attr sensors, 19 candidates, 30k IG points
 
+# Generate schematic that combines CAAF sensors and clusters
+L,n_candidate, sensors = 6,30, attr_sensors[:15]
+x_candidate = np.linspace(L/30, L, n_candidate)
+
+# Plot arrows (loads) at x_list
+color_list = sns.color_palette(palette=cc.glasbey_category10,n_colors=n_clusters_)
+
+# Plot the beam
+plt.figure(figsize=(10, 2))
+
+# Fixed support (like a wall at x = 0)
+plt.plot([0, 0], [-0.8, 0.8], 'k', linewidth=3)  # Thick vertical wall
+
+# Plot arrows (loads) at x_list
+rank = 1
+for i in sensors:
+  plt.arrow(x_candidate[i], 0.0, 0, 0.5, head_width=0.15, head_length=0.15, fc='k', ec='k')
+  annotation = plt.annotate(str(rank), (x_candidate[i]-0.07, 0.7), fontsize=18, color='black')
+  rank += 1
+
+for i in range(n_candidate):
+  if i in cluster_centers_indices:
+    plt.plot([x_candidate[i], x_candidate[i]], [-0.18, 0.18], linewidth=5, color = color_list[labels[i]])
+  else:
+    plt.plot([x_candidate[i], x_candidate[i]], [-0.2, 0.2], linewidth=2, color = color_list[labels[i]])
+
+plt.plot([0, L], [0.2, 0.2], 'k-', linewidth=3)  # Beam (horizontal line)
+plt.plot([0, L], [-0.2, -0.2], 'k-', linewidth=3)  # Beam (horizontal line)
+# Formatting
+plt.xlim(-0.5, L + 0.5)
+plt.ylim(-0.8, 0.8)
+plt.axis('off')
+plt.savefig("SHM_CAAF&clusters.png",format='png',bbox_inches='tight')
+plt.savefig("SHM_CAAF&clusters.eps",format='eps')
+plt.show()
+
 # plot optimal sensors and compute the performance metrics
 plot_cantilever_sensors(6,30, attr_sensors[:5])
 results = process_modes(Xnx, attr_sensors[:5], verbose = True)
@@ -721,7 +757,11 @@ results = process_modes(Xnx, attr_sensors[:5], verbose = True)
 plot_cantilever_sensors(6,30, attr_sensors[:15])
 results = process_modes(Xnx, attr_sensors[:15], verbose = True)
 
-# compute and plot performance as a functino of sensor number
+# Plot performance comparison of different sensor placement methods
+plt.rc('axes', labelsize=34, titlesize=20)
+plt.rc('xtick',labelsize=30)
+plt.rc('ytick',labelsize=30)
+
 n_sensor_max = 19
 n_sensor_min = 5
 n_sensors_list = np.arange(n_sensor_min,n_sensor_max+1)
@@ -756,40 +796,54 @@ for n_sensors in n_sensors_list:
   CN_KE[n_sensors-n_sensor_min] = results['CN']
   DET_KE[n_sensors-n_sensor_min] = results["DET"]
 
-plt.figure(figsize=(10, 7))
+plt.figure(figsize=(8, 5.6))
+plt.grid(True)
 plt.plot(n_sensors_list,RMS, color='b',linewidth=2, label='RMS')
 plt.plot(n_sensors_list,RMS_EI, color='r',linewidth=2, label='RMS_EI')
 plt.plot(n_sensors_list,RMS_KE, color='g',linewidth=2, label='RMS_KE')
-plt.xlabel('$n_{sensor}$',fontsize=25)
+plt.xlabel('$n_{\mathrm{sensor}}$',fontsize=40)
 plt.ylabel('RMS')
 plt.xlim([n_sensor_min,n_sensor_max])
 plt.xticks(range(n_sensor_min, n_sensor_max+1, 2))
-# plt.savefig('SHM_RMS.eps',format = 'eps')
-# plt.savefig('SHM_RMS.png')
+plt.tight_layout()
+plt.savefig('SHM_RMS.pdf',format = 'pdf')
+plt.savefig('SHM_RMS.png')
 plt.legend()
 plt.show()
 
-plt.figure(figsize=(10, 7))
+plt.figure(figsize=(8, 5.6))
+plt.grid(True)
 plt.plot(n_sensors_list,CN,color='b',linewidth=2, label='CN')
 plt.plot(n_sensors_list,CN_EI,color='r',linewidth=2, label='CN_EI')
 plt.plot(n_sensors_list,CN_KE,color='g',linewidth=2, label='CN_KE')
-plt.xlabel('$n_{sensor}$',fontsize=25)
+plt.xlabel('$n_{\mathrm{sensor}}$',fontsize=40)
 plt.ylabel('CN')
 plt.ylim([1,5])
 plt.xlim([n_sensor_min,n_sensor_max])
 plt.xticks(range(n_sensor_min, n_sensor_max+1, 2))
-# plt.savefig('SHM_CN.eps',format = 'eps')
-# plt.savefig('SHM_CN.png')
+plt.tight_layout()
+plt.savefig('SHM_CN.pdf',format = 'pdf')
+plt.savefig('SHM_CN.png')
 plt.show()
 
-plt.figure(figsize=(10, 7))
+plt.figure(figsize=(8, 5.6))
+plt.grid(True)
 plt.plot(n_sensors_list,DET,color='b',linewidth=2, label='DET')
 plt.plot(n_sensors_list,DET_EI,color='r',linewidth=2, label='DET_EI')
 plt.plot(n_sensors_list,DET_KE,color='g',linewidth=2, label='DET_KE')
-plt.xlabel('$n_{sensor}$',fontsize=25)
+plt.xlabel('$n_{\mathrm{sensor}}$',fontsize=40)
 plt.ylabel('DET')
 plt.xlim([n_sensor_min,n_sensor_max])
 plt.xticks(range(n_sensor_min, n_sensor_max+1, 2))
-# plt.savefig('SHM_DET.eps',format = 'eps')
-# plt.savefig('SHM_DET.png')
+# Force scientific notation if needed
+ax = plt.gca()
+ax.ticklabel_format(style='sci', axis='y', scilimits=(0,0), useMathText=True)
+# ax.yaxis.get_offset_text().set_fontsize(30) # Adjust font size of the offset text
+
+# Adjust the offset text position (axes coordinates: 0-1)
+offset_text = ax.yaxis.get_offset_text()
+offset_text.set_position((0, 2))  # Slightly above the top
+plt.tight_layout()
+plt.savefig('SHM_DET.pdf',format = 'pdf')
+plt.savefig('SHM_DET.png')
 plt.show()

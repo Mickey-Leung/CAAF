@@ -5,7 +5,6 @@ import numpy as np
 import seaborn as sns
 import colorcet as cc
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 from sklearn.cluster import *
 import captum
@@ -87,15 +86,6 @@ z_flatten = z_grid.reshape(n_probe)
 P_flatten = P_w_probe_raw.reshape(n_points,n_probe,order='F')
 print('n_probe =',n_probe)
 
-def normalize_01(data):
-    data_min = np.min(data, axis=0)
-    data_max = np.max(data, axis=0)
-    data_scaled = (data - data_min) / (data_max - data_min)
-    return data_scaled, data_min, data_max
-
-def unnormalize_01(data_scaled, data_min, data_max):
-    return data_scaled * (data_max - data_min) + data_min
-
 def normalize_m1_1(data):
     data_mean = np.mean(data, axis=0)
     max_range = np.max(np.abs(data - data_mean), axis=0)
@@ -105,60 +95,9 @@ def normalize_m1_1(data):
 def unnormalize_m1_1(data_scaled, data_mean, max_range):
     return data_scaled * max_range + data_mean
 
-def normalize_utau(data, utau, scale=0.1, square=False):
-    data_mean = np.mean(data, axis=0)
-    denom = utau**2 if square else utau
-    data_scaled = scale * (data - data_mean) / denom
-    return data_scaled, data_mean
+P_scaled, P_mean, P_range = normalize_m1_1(P_flatten)
+V_scaled, V_mean, V_range = normalize_m1_1(V_probe_raw)
 
-def unnormalize_utau(data_scaled, data_mean, utau, scale=0.1, square=False):
-    denom = utau**2 if square else utau
-    return data_scaled * denom / scale + data_mean
-
-def normalize_utau_01(data, utau, scale=1.0, square=False):
-    # Step 1: Normalize by u_tau
-    data_mean = np.mean(data, axis=0)
-    denom = utau**2 if square else utau
-    data_utau = scale * (data - data_mean) / denom
-
-    # Step 2: Normalize to [0, 1]
-    data_min = np.min(data_utau, axis=0)
-    data_max = np.max(data_utau, axis=0)
-    data_scaled = (data_utau - data_min) / (data_max - data_min)
-
-    return data_scaled, data_mean, data_min, data_max
-
-def unnormalize_utau_01(data_scaled, data_mean, data_min, data_max, utau, scale=1.0, square=False):
-    # Step 1: Unscale from [0, 1]
-    data_utau = data_scaled * (data_max - data_min) + data_min
-
-    # Step 2: Unnormalize from u_tau
-    denom = utau**2 if square else utau
-    data_original = data_utau * denom / scale + data_mean
-
-    return data_original
-
-# # For [0, 1] normalization
-if normalization == "01":
-  P_scaled, P_min, P_max = normalize_01(P_flatten)
-  V_scaled, V_min, V_max = normalize_01(V_probe_raw)
-elif normalization == "m11":
-  # For [-1, 1] normalization
-  P_scaled, P_mean, P_range = normalize_m1_1(P_flatten)
-  V_scaled, V_mean, V_range = normalize_m1_1(V_probe_raw)
-elif normalization == "u_tau":
-  # For u_tau normalization
-  P_scaled, P_mean = normalize_utau(P_flatten, utau, scale=0.1, square=True)
-  V_scaled, V_mean = normalize_utau(V_probe_raw, utau, scale=1.0, square=False)
-elif normalization == "u_tau_01":
-  # Normalize V using u_tau and then to [0,1]
-  P_scaled, P_mean, P_min, P_max = normalize_utau_01(P_flatten, utau, scale=1.0, square=True)
-  V_scaled, V_mean, V_min, V_max = normalize_utau_01(V_probe_raw, utau, scale=1.0, square=False)
-elif normalization == "standard":
-  # For standard normalization
-  scaler = StandardScaler()
-  P_scaled = scaler.fit_transform(P_flatten)
-  V_scaled = scaler.fit_transform(V_probe_raw.reshape(-1, 1)).reshape(-1)
 
 print(P_scaled.shape)
 print(V_scaled.shape)
@@ -554,6 +493,7 @@ print(attr_sensors)
 attr_sensors = np.array([182,187,129,139,106,243,231,204,93,260,283,267,226,103,134,300,218,294,63,197]) # 20 CAAF sensors
 attr_sensors2 = np.array([0,   9,  18, 114, 123, 132, 228, 237, 246, 351])  # evenly spaced uniform sensors
 
+# Plot cross-correlation contour and sensor locations --------------------------------------------
 fig = plt.figure(figsize=(10, 8))
 # Create scatter plots for all points
 plt.axvline(x=0, color='black', linestyle=':')
@@ -591,7 +531,7 @@ plt.savefig("PV_sensors.png",format='png',dpi=600)
 plt.savefig("PV_sensors.pdf",format='pdf',bbox_inches='tight')
 plt.show()
 
-# Plot 2 models together
+# Plot signal comparison of different sensor configurations --------------------------------------------
 use_GPU = False
 sensors_CAAF = np.array([182,187,129,139,106,243,231,204,93,260]) # 20 CAAF sensors with best pred
 sensors_uniform = np.array([0,   9,  18, 114, 123, 132, 228, 237, 246, 351])  # evenly spaced
@@ -646,4 +586,65 @@ plt.tight_layout()
 
 plt.savefig("PV_Pred_Compare.pdf",format='pdf')
 plt.legend(loc='best',fontsize=20)
+plt.show()
+
+
+### Plot instantanuous fields of P and V --------------------------------------------
+# === Load data ===
+V = scipy.io.loadmat("V_t10000.mat")["V"]
+P_w = scipy.io.loadmat("P_w_t10000.mat")["P_w"]
+x = scipy.io.loadmat("x_edge.mat")["x"].squeeze()
+y = scipy.io.loadmat("y_edge.mat")["y"].squeeze()
+z = scipy.io.loadmat("z_edge.mat")["z"].squeeze()
+
+# === Constants ===
+Retau = 186.0
+utau = 0.057231058999996
+mu = 3.076923076923077e-04
+
+# === Plot P_w ===
+P_w_prime = P_w - np.mean(P_w)
+
+fig, ax = plt.subplots(figsize=(10, 4))
+ax.set_box_aspect(1/2.5)
+ax.tick_params(labelsize=20, width=2)
+
+# Note: Transpose P_w_prime for same orientation as MATLAB (using .T)
+levels = np.linspace(-20, 20, 500)  # define range explicitly
+c = ax.pcolormesh(x, z, (P_w_prime.T * 2) / (utau**2), cmap='viridis', rasterized=True, shading='gouraud')
+
+c.set_clim(-20, 20) # clim is set by colorbar now
+cb=plt.colorbar(c, ax=ax, ticks=np.arange(-20, 21, 10))
+ax.set_ylim([0, 10])
+ax.set_xlim([0, 25])
+ax.set_yticks(np.arange(0, 11, 10))
+ax.set_xlabel(r"$x/h$", fontsize=20)
+ax.set_ylabel(r"$z/h$", fontsize=20)
+
+plt.tight_layout()
+plt.savefig("P_w_instant.pdf",dpi=150, bbox_inches='tight')
+plt.show()
+
+# === Plot V at y+ = 10 ===
+v = (V - np.mean(V)) / utau
+v_min, v_max = np.min(v), np.max(v)
+
+fig, ax = plt.subplots(figsize=(10, 4))
+ax.set_box_aspect(1/2.5)
+ax.tick_params(labelsize=20, width=2)
+
+levels = np.linspace(-2, 2, 500)  # define range explicitly
+c = ax.pcolormesh(x, z, v.T, cmap='viridis', rasterized=True, shading='gouraud')
+
+c.set_clim(-2, 2) # clim is set by colorbar now
+cb = plt.colorbar(c, ax=ax, ticks=np.arange(-2, 3))
+
+ax.set_ylim([0, 10])
+ax.set_xlim([0, 25])
+ax.set_yticks(np.arange(0, 11, 10))
+ax.set_xlabel(r"$x/h$", fontsize=20)
+ax.set_ylabel(r"$z/h$", fontsize=20)
+
+plt.tight_layout()
+plt.savefig("v_instant.pdf",dpi=150, bbox_inches='tight')
 plt.show()
