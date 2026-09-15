@@ -1,0 +1,31 @@
+Airfoil_Application_MLP.ipynb
+
+# Local regression checks and execution helpers.
+/tests/
+
+# Local Python environments and caches.
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Reproducible packaging and verification outputs.
+*.egg-info/
+build/
+dist/
+artifacts/
+.ipynb_checkpoints/
+*.log
+
+# Local editor and operating-system settings.
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
