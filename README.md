@@ -76,11 +76,7 @@ See the [API reference](API.md) for all options, custom models and optimizers, t
 
 ## Run the demo notebooks
 
-Launch JupyterLab from the repository root, open a notebook in `Demo/`, select the environment used for installation, and run its cells from top to bottom.
-
-```sh
-python -m jupyterlab
-```
+Open a notebook in `Demo/`, select the environment used for installation, and run its cells from top to bottom.
 
 | Notebook | Task and data |
 |---|---|
