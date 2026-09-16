@@ -2,6 +2,10 @@
 
 Correlation-Assisted Attribution Framework (CAAF) ranks sensor locations for predictive regression by clustering correlated sensor histories, training on cluster representatives, and ranking them with integrated gradients. This repository accompanies *Data-driven Sensor Placement for Predictive Applications: A Correlation-Assisted Attribution Framework (CAAF)*.
 
+<p align="center">
+  <img src="CAAF_pipeline.png" alt="CAAF sensor-ranking pipeline">
+</p>
+
 ## Installation
 
 Use Python 3.10 or newer. Download or clone this repository, keep its directory structure, and install CAAF with the notebook dependencies from the repository root.

@@ -2,6 +2,7 @@ Airfoil_Application_MLP.ipynb
 
 # Local regression checks and execution helpers.
 /tests/
+*.drawio
 
 # Local Python environments and caches.
 .venv/
